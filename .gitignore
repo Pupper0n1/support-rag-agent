@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.local
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.aws-sam/
+eval/reports/*.json
+eval/reports/*.html
+!eval/reports/.gitkeep
+.DS_Store
