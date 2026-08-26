@@ -20,7 +20,7 @@ from langchain_mcp_adapters.tools import load_mcp_tools
 from mcp.server.fastmcp import FastMCP
 from mcp.shared.memory import create_connected_server_and_client_session
 
-from support_agent.agent.prompts import SYSTEM_PROMPT, ticket_message
+from support_agent.agent.prompts import system_prompt, ticket_message
 from support_agent.config import AgentSettings
 from support_agent.types import AgentAnswer, Citation, RouteDecision, Ticket
 
@@ -54,6 +54,11 @@ class _EscalationPayload(TypedDict):
     record: dict[str, str]
 
 
+class _InfoRequestPayload(TypedDict):
+    questions: list[str]
+    reply_text: str
+
+
 class SupportAgent:
     def __init__(self, server: FastMCP, settings: AgentSettings) -> None:
         self._server = server
@@ -75,7 +80,7 @@ class SupportAgent:
         llm = self._llm.bind_tools(list(tools))
 
         messages: list[BaseMessage] = [
-            SystemMessage(content=SYSTEM_PROMPT),
+            SystemMessage(content=system_prompt(self._settings.escalation_confidence_floor)),
             HumanMessage(content=ticket_message(ticket)),
         ]
         answer = AgentAnswer(ticket_id=ticket.ticket_id, route=RouteDecision.ESCALATE, reply_text="")
@@ -140,6 +145,11 @@ class SupportAgent:
             answer.route = RouteDecision.ESCALATE
             answer.escalation_reason = escalation["record"]["reason"]
             answer.reply_text = escalation["record"]["summary"]
+        elif tool_name == "request_information":
+            info: _InfoRequestPayload = json.loads(payload)
+            answer.route = RouteDecision.NEEDS_INFO
+            answer.reply_text = info["reply_text"]
+            answer.escalation_reason = None
 
 
 def _citation(hit: _SearchHitPayload) -> Citation:

@@ -46,3 +46,9 @@ class DraftReplyResult(TypedDict):
     reply_text: str
     citations: list[str]
     word_count: int
+
+
+class InfoRequestResult(TypedDict):
+    ticket_id: str
+    questions: list[str]
+    reply_text: str

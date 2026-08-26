@@ -16,6 +16,7 @@ from support_agent.mcp_tools.schemas import (
     DraftReplyResult,
     EscalationRecord,
     EscalationResult,
+    InfoRequestResult,
     SearchHit,
     SearchResult,
 )
@@ -112,6 +113,24 @@ def build_server(retriever: HybridRetriever, escalations: EscalationSink) -> Fas
             "reply_text": text,
             "citations": list(dict.fromkeys(cited_doc_ids)),
             "word_count": len(text.split()),
+        }
+
+    @mcp.tool()
+    def request_information(ticket_id: str, questions: list[str], reply_text: str) -> InfoRequestResult:
+        """Ask the customer for details needed before the ticket can be resolved.
+
+        Use this instead of escalating when the KB likely covers the problem
+        but the ticket is missing a fact required to pick the right article or
+        step - for example which browser, an error message, a job id, or which
+        of two settings is in use. `questions` lists each missing fact as a
+        short question. `reply_text` is the customer-facing message that asks
+        them. Do not use this to stall on a ticket the KB clearly answers.
+        """
+        cleaned = [q.strip() for q in questions if q.strip()]
+        return {
+            "ticket_id": ticket_id,
+            "questions": cleaned,
+            "reply_text": reply_text.strip(),
         }
 
     return mcp
