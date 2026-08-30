@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Customer-support RAG agent - Lambda behind HTTP API with S3 conversation logs
+
+Parameters:
+  ElasticsearchUrl:
+    Type: String
+  ElasticsearchApiKeySecretArn:
+    Type: String
+    Description: Secrets Manager ARN holding the ES API key
+  AnthropicApiKeySecretArn:
+    Type: String
+  AgentModel:
+    Type: String
+    Default: claude-opus-5
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Globals:
+  Function:
+    Timeout: 120
+    MemorySize: 3008
+    Architectures: [x86_64]
+
+Resources:
+  ConversationLogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub support-agent-conversation-logs-${Stage}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireRawLogs
+            Status: Enabled
+            ExpirationInDays: 180
+      VersioningConfiguration:
+        Status: Enabled
+
+  EscalationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub support-agent-escalations-${Stage}.fifo
+      FifoQueue: true
+      ContentBasedDeduplication: false
+      MessageRetentionPeriod: 1209600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt EscalationDLQ.Arn
+        maxReceiveCount: 5
+
+  EscalationDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub support-agent-escalations-dlq-${Stage}.fifo
+      FifoQueue: true
+
+  TicketApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref Stage
+      CorsConfiguration: false
+      AccessLogSettings:
+        DestinationArn: !GetAtt ApiAccessLogs.Arn
+        Format: '{"requestId":"$context.requestId","status":"$context.status","latency":"$context.responseLatency","path":"$context.path"}'
+
+  ApiAccessLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 30
+
+  AgentFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerTag: latest
+      DockerContext: ..
+      Dockerfile: Dockerfile
+    Properties:
+      PackageType: Image
+      Description: Routes support tickets between retrieval, escalation, and auto-reply
+      ReservedConcurrentExecutions: 20
+      Environment:
+        Variables:
+          ES_URL: !Ref ElasticsearchUrl
+          ES_API_KEY_SECRET_ARN: !Ref ElasticsearchApiKeySecretArn
+          ANTHROPIC_API_KEY_SECRET_ARN: !Ref AnthropicApiKeySecretArn
+          AGENT_MODEL: !Ref AgentModel
+          CONVERSATION_LOG_BUCKET: !Ref ConversationLogBucket
+          CONVERSATION_LOG_PREFIX: conversations
+          ESCALATION_QUEUE_URL: !Ref EscalationQueue
+          HF_HOME: /opt/hf
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: s3:PutObject
+              Resource: !Sub ${ConversationLogBucket.Arn}/conversations/*
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt EscalationQueue.Arn
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource:
+                - !Ref ElasticsearchApiKeySecretArn
+                - !Ref AnthropicApiKeySecretArn
+      Events:
+        SubmitTicket:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref TicketApi
+            Path: /tickets
+            Method: POST
+
+Outputs:
+  ApiUrl:
+    Value: !Sub https://${TicketApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/tickets
+  ConversationLogBucketName:
+    Value: !Ref ConversationLogBucket
+  EscalationQueueUrl:
+    Value: !Ref EscalationQueue
