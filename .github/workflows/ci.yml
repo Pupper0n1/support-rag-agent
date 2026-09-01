@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: |
+          ruff check src eval tests scripts
+          ruff format --check src eval tests scripts
+      - name: Type check
+        run: mypy src eval
+      - name: Test
+        run: pytest -q
+      - name: Regenerate eval set and verify it is unchanged
+        run: |
+          python eval/dataset/generate_tickets.py
+          git diff --exit-code -- eval/dataset/tickets.jsonl
+
+  sam-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/setup-sam@v2
+        with:
+          use-installer: true
+      - run: sam validate --lint --template infra/template.yaml
