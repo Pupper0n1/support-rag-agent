@@ -19,7 +19,9 @@ SECRET_ENV_MAP: dict[str, str] = {
 
 
 def hydrate_secrets(region: str) -> list[str]:
-    pending = {arn_var: target for arn_var, target in SECRET_ENV_MAP.items() if os.environ.get(arn_var)}
+    pending = {
+        arn_var: target for arn_var, target in SECRET_ENV_MAP.items() if os.environ.get(arn_var)
+    }
     if not pending:
         return []
 

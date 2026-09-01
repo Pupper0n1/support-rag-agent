@@ -73,9 +73,7 @@ def ndcg_at_k(
             break
         dcg += gain(doc) / math.log2(position + 1)
 
-    ideal_gains = sorted(
-        (grades.get(d, 3) for d in gold) if gold else [], reverse=True
-    )
+    ideal_gains = sorted((grades.get(d, 3) for d in gold) if gold else [], reverse=True)
     # Graded docs outside the gold set with a positive grade also belong in
     # the ideal ordering; otherwise a grader upgrading a non-gold doc would
     # make nDCG exceed 1.

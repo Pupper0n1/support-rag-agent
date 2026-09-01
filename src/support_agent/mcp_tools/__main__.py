@@ -1,6 +1,6 @@
 """Run the MCP server over stdio for local development and MCP inspectors.
 
-    python -m support_agent.mcp_tools
+python -m support_agent.mcp_tools
 """
 
 from __future__ import annotations

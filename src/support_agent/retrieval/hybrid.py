@@ -46,7 +46,11 @@ class HybridRetriever:
 
         fused = reciprocal_rank_fusion(bm25_hits, knn_hits, k=s.rrf_k)
         logger.debug(
-            "query=%r bm25=%d knn=%d fused=%d", query[:60], len(bm25_hits), len(knn_hits), len(fused)
+            "query=%r bm25=%d knn=%d fused=%d",
+            query[:60],
+            len(bm25_hits),
+            len(knn_hits),
+            len(fused),
         )
 
         reranked = False

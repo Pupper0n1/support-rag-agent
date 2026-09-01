@@ -20,7 +20,11 @@ from typing import TypedDict
 
 from support_agent.agent.runner import SupportAgent
 from support_agent.config import Settings, get_settings
-from support_agent.mcp_tools.escalation import EscalationSink, InMemoryEscalationSink, SQSEscalationSink
+from support_agent.mcp_tools.escalation import (
+    EscalationSink,
+    InMemoryEscalationSink,
+    SQSEscalationSink,
+)
 from support_agent.mcp_tools.server import build_server
 from support_agent.observability.conversation_log import (
     ConversationLog,

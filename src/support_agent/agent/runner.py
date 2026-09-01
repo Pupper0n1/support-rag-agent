@@ -63,12 +63,25 @@ class SupportAgent:
     def __init__(self, server: FastMCP, settings: AgentSettings) -> None:
         self._server = server
         self._settings = settings
-        api_key = settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else None
-        self._llm = ChatAnthropic(
-            model=settings.agent_model,
-            max_tokens=settings.max_tokens,
-            api_key=api_key,
-        )
+        # langchain-anthropic exposes its fields under pydantic aliases; the
+        # alias names are the ones the type checker sees, and it also insists
+        # on timeout/stop being passed. With no key given the client falls
+        # back to ANTHROPIC_API_KEY in the environment.
+        if settings.anthropic_api_key is not None:
+            self._llm = ChatAnthropic(
+                model_name=settings.agent_model,
+                max_tokens_to_sample=settings.max_tokens,
+                api_key=settings.anthropic_api_key,
+                timeout=None,
+                stop=None,
+            )
+        else:
+            self._llm = ChatAnthropic(
+                model_name=settings.agent_model,
+                max_tokens_to_sample=settings.max_tokens,
+                timeout=None,
+                stop=None,
+            )
 
     async def handle(self, ticket: Ticket) -> AgentAnswer:
         async with create_connected_server_and_client_session(self._server._mcp_server) as session:
@@ -83,7 +96,9 @@ class SupportAgent:
             SystemMessage(content=system_prompt(self._settings.escalation_confidence_floor)),
             HumanMessage(content=ticket_message(ticket)),
         ]
-        answer = AgentAnswer(ticket_id=ticket.ticket_id, route=RouteDecision.ESCALATE, reply_text="")
+        answer = AgentAnswer(
+            ticket_id=ticket.ticket_id, route=RouteDecision.ESCALATE, reply_text=""
+        )
         latest_hits: list[_SearchHitPayload] = []
 
         for _ in range(self._settings.max_tool_iterations):
@@ -137,9 +152,7 @@ class SupportAgent:
             answer.route = RouteDecision.AUTO_REPLY
             answer.reply_text = draft["reply_text"]
             cited = set(draft["citations"])
-            answer.citations = [
-                _citation(h) for h in latest_hits if h["doc_id"] in cited
-            ]
+            answer.citations = [_citation(h) for h in latest_hits if h["doc_id"] in cited]
         elif tool_name == "escalate_ticket":
             escalation: _EscalationPayload = json.loads(payload)
             answer.route = RouteDecision.ESCALATE

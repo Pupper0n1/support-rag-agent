@@ -116,7 +116,9 @@ def build_server(retriever: HybridRetriever, escalations: EscalationSink) -> Fas
         }
 
     @mcp.tool()
-    def request_information(ticket_id: str, questions: list[str], reply_text: str) -> InfoRequestResult:
+    def request_information(
+        ticket_id: str, questions: list[str], reply_text: str
+    ) -> InfoRequestResult:
         """Ask the customer for details needed before the ticket can be resolved.
 
         Use this instead of escalating when the KB likely covers the problem

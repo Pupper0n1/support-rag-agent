@@ -7,10 +7,11 @@ other's internals.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from typing import Protocol, Sequence, TypedDict
+from typing import Protocol, TypedDict
 
 
 class TicketChannel(StrEnum):

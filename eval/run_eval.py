@@ -21,15 +21,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TypedDict
 
-from support_agent.config import get_settings
-from support_agent.mcp_tools.escalation import InMemoryEscalationSink
-from support_agent.mcp_tools.server import build_server
-from support_agent.retrieval.embeddings import SentenceTransformerEmbeddings
-from support_agent.retrieval.es_client import KnowledgeBaseIndex
-from support_agent.retrieval.hybrid import HybridRetriever
-from support_agent.retrieval.rerank import CrossEncoderReranker, PassthroughReranker
-from support_agent.types import Ticket, TicketChannel, TicketPriority
-
 from eval.metrics import (
     RoutingConfusion,
     base_doc_id,
@@ -39,6 +30,14 @@ from eval.metrics import (
     routing_accuracy,
     routing_confusion,
 )
+from support_agent.config import get_settings
+from support_agent.mcp_tools.escalation import InMemoryEscalationSink
+from support_agent.mcp_tools.server import build_server
+from support_agent.retrieval.embeddings import SentenceTransformerEmbeddings
+from support_agent.retrieval.es_client import KnowledgeBaseIndex
+from support_agent.retrieval.hybrid import HybridRetriever
+from support_agent.retrieval.rerank import CrossEncoderReranker, PassthroughReranker
+from support_agent.types import Ticket, TicketChannel, TicketPriority
 
 DATASET = Path(__file__).parent / "dataset" / "tickets.jsonl"
 GRADES = Path(__file__).parent / "dataset" / "human_grades.jsonl"
@@ -274,7 +273,8 @@ def main() -> None:
     a = report["aggregate"]
     print(f"\n{report['name']}  ({report['mode']}, {a['tickets']} tickets)")
     print(f"  recall@3 {a['recall_at_3']:.3f}   recall@6 {a['recall_at_6']:.3f}")
-    print(f"  MRR      {a['mrr']:.3f}   nDCG@6   {a['ndcg_at_6']:.3f}  ({a['graded_pairs']} graded pairs)")
+    graded = f"({a['graded_pairs']} graded pairs)"
+    print(f"  MRR      {a['mrr']:.3f}   nDCG@6   {a['ndcg_at_6']:.3f}  {graded}")
     if a["routing_accuracy"] is not None:
         print(f"  routing  {a['routing_accuracy']:.3f}")
         for c in a["routing_confusion"]:

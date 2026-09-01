@@ -49,7 +49,9 @@ def _to_document(source: _SourceDoc) -> KBDocument:
 
 
 class KnowledgeBaseIndex:
-    def __init__(self, settings: ElasticsearchSettings, client: Elasticsearch | None = None) -> None:
+    def __init__(
+        self, settings: ElasticsearchSettings, client: Elasticsearch | None = None
+    ) -> None:
         self._settings = settings
         self._client = client or self._build_client(settings)
 
