@@ -13,5 +13,6 @@ build/
 .aws-sam/
 eval/reports/*.json
 eval/reports/*.html
+eval/reports/sweep-*.md
 !eval/reports/.gitkeep
 .DS_Store
