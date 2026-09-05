@@ -2,7 +2,7 @@
 name = "support-rag-agent"
 version = "0.1.0"
 description = "Customer-support RAG agent with hybrid Elasticsearch retrieval and MCP tool-calling"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
   "langchain>=0.3.0",
   "langchain-core>=0.3.0",
@@ -35,7 +35,7 @@ where = ["src"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "ANN"]
@@ -45,10 +45,16 @@ ignore = ["ANN401", "ANN101", "ANN102"]
 "eval/dataset/generate_tickets.py" = ["E501"]
 
 [tool.mypy]
-python_version = "3.11"
 strict = true
 warn_unreachable = true
 ignore_missing_imports = true
+
+# Heavy ML deps ship stubs that are slow to check and, in numpy's case, use
+# PEP 695 syntax the pinned interpreter may not parse. Nothing here depends
+# on their types beyond opaque model objects.
+[[tool.mypy.overrides]]
+module = ["numpy.*", "torch.*", "sentence_transformers.*", "transformers.*"]
+follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
